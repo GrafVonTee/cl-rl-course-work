@@ -1,0 +1,11 @@
+numpy
+pandas
+matplotlib
+vllm
+torch
+torchvision
+datasets
+ipykernel
+ipywidgets
+evalplus
+tqdm
