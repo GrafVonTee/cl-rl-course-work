@@ -1,6 +1,8 @@
 numpy
 pandas
 matplotlib
+unsloth
+peft
 vllm
 torch
 torchvision

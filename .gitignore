@@ -6,6 +6,8 @@ __pycache__/
 # ML
 datasets/
 models/
+checkpoints/
+unsloth*/
 
 # C extensions
 *.so
