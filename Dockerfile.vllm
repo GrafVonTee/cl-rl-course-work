@@ -1,0 +1,15 @@
+FROM vllm/vllm-openai:latest
+
+RUN pip install --no-cache-dir \
+	jupyter \
+	notebook \
+	pandas \
+	datasets \
+	tqdm \
+	huggingface_hub \
+	transformers \
+	accelerate
+
+WORKDIR /workspace
+
+CMD ["jupyter", "notebook", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root", "--NotebookApp.token=''", "--notebook-dir=/workspace"]
