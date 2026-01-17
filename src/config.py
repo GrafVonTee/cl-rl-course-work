@@ -20,7 +20,7 @@ SFT_MODEL_PATH = f"{MODEL_PATH}-sft"
 PTUNING_MODEL_PATH = f"{MODEL_PATH}-ptuning"
 
 VLLM_PARAMS = {
-	"max_model_len": 1024,
+	"max_model_len": 2048,
 	"dtype": "auto",
 	"gpu_memory_utilization": 0.7,
     "enforce_eager": False,
@@ -33,7 +33,7 @@ SAMPLING_SETTINGS = {
     "n": 1,
     "temperature": 0.7,
     "min_p": 0.1,
-    "max_tokens": 1024,
+    "max_tokens": 2048,
     "ignore_eos": False,
     "detokenize": True,
     "logprobs": 1,
