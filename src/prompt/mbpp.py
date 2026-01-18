@@ -52,6 +52,11 @@ def build_prompt(example: dict, tokenizer, train=False) -> str:
     if train:
         messages.append({"role": "assistant", "content": assistant_msg})
 
-    text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=not train)
+    text = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=not train,
+        thinking=True
+    )
 
     return {"text": text}

@@ -1,3 +1,4 @@
+import time
 from tqdm.auto import tqdm
 import src.prompt.mbpp as mbpp
 import src.prompt.humaneval as humaneval
@@ -7,19 +8,29 @@ import src.metrics as metrics_utils
 
 def run_mbpp_bench(mbpp_dataset, split, llm, tokenizer, sampling_params, batch_size=2048):
     dataset = mbpp_dataset[split]
-    tests = dataset["test_list"] # Это список списков тестов
+    tests = dataset["test_list"]
 
     outputs_all = []
     metrics_all = []
 
     print(f"Starting MBPP benchmark on {len(dataset)} samples...")
 
-    for i in tqdm(range(0, len(dataset), batch_size)):
+    pbar = tqdm(range(0, len(dataset), batch_size))
+    for i in pbar:
         batch_slice = dataset.select(range(i, min(i + batch_size, len(dataset))))
 
         # 1. Генерация
         prompts = [mbpp.build_prompt(x, tokenizer, train=False)["text"] for x in batch_slice]
+
+        start_time = time.time()
         outs = llm.generate(prompts, sampling_params)
+        duration = time.time() - start_time
+
+        total_tokens = sum(len(out.outputs[0].token_ids) for out in outs)
+        speed = total_tokens / duration if duration > 0 else 0
+        avg_len = total_tokens / len(outs) if outs else 0
+
+        pbar.set_postfix({"tok/s": f"{speed:.2f}", "avg_len": f"{avg_len:.1f}"})
 
         # 2. Тестирование
         for j, out in enumerate(outs):
@@ -29,7 +40,6 @@ def run_mbpp_bench(mbpp_dataset, split, llm, tokenizer, sampling_params, batch_s
 
             passed, total = test_execute.run_mbpp_tests_for_sample(generated_text, current_tests)
 
-            # Метрики для одного примера
             met = {
                 "pass@1": 1 if passed == total else 0,
                 "%passed": passed / total if total > 0 else 0,
@@ -50,17 +60,26 @@ def run_humaneval_bench(he_dataset, split, llm, tokenizer, sampling_params, batc
 
     print(f"Starting HumanEval benchmark on {len(dataset)} samples...")
 
-    for i in tqdm(range(0, len(dataset), batch_size)):
+    pbar = tqdm(range(0, len(dataset), batch_size))
+    for i in pbar:
         batch_slice = dataset.select(range(i, min(i + batch_size, len(dataset))))
 
         # 1. Генерация
         prompts = [humaneval.build_prompt(x, tokenizer) for x in batch_slice]
+
+        start_time = time.time()
         outs = llm.generate(prompts, sampling_params)
+        duration = time.time() - start_time
+
+        total_tokens = sum(len(out.outputs[0].token_ids) for out in outs)
+        speed = total_tokens / duration if duration > 0 else 0
+        avg_len = total_tokens / len(outs) if outs else 0
+
+        pbar.set_postfix({"tok/s": f"{speed:.2f}", "avg_len": f"{avg_len:.1f}"})
 
         # 2. Тестирование
         for j, out in enumerate(outs):
             generated_text = out.outputs[0].text
-            # В датасете HF Humaneval ключи: 'test', 'entry_point'
             test_str = batch_slice[j]["test"]
             entry_point = batch_slice[j]["entry_point"]
 

@@ -37,5 +37,5 @@ SAMPLING_SETTINGS = {
     "ignore_eos": False,
     "detokenize": True,
     "logprobs": 1,
-    "repetition_penalty": 1.05,
+    "repetition_penalty": 1,
 }
