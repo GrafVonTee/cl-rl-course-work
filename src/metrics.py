@@ -1,38 +1,124 @@
-import torch
+from abc import ABC, abstractmethod
+from typing import List, Dict, Any
+from dataclasses import dataclass
+import numpy as np
 
-def calculate_entropy_from_logprobs(seq) -> float:
-    logprobs_list = []
-    if not seq.logprobs:
-        return 0.0
 
-    for token_logprobs in seq.logprobs:
-        # vLLM возвращает dict {token_id: LogprobObj}
-        # Берем логпроб выбранного токена
-        for token_id, logprob_obj in token_logprobs.items():
-            if hasattr(logprob_obj, 'logprob'):
-                val = logprob_obj.logprob
-            else:
-                val = float(logprob_obj)
-            logprobs_list.append(val)
-            break # Берем только топ-1 (реально выбранный)
+@dataclass
+class ExecutionResult:
+	code: str
+	passed_tests: int = 0
+	total_tests: int = 0
+	logs: str = ""
+	entropy: float = 0.0  # <--- ДОБАВИТЬ ЭТО ПОЛЕ
 
-    if not logprobs_list:
-        return 0.0
+	@property
+	def is_passed(self) -> bool:
+		return self.total_tests > 0 and self.total_tests == self.passed_tests
 
-    logprobs_tensor = torch.tensor(logprobs_list, dtype=torch.float)
-    entropy = -logprobs_tensor.mean().item()
-    return entropy
+	@property
+	def pass_ratio(self) -> float:
+		if self.total_tests == 0: return 0.0
+		return self.passed_tests / self.total_tests
 
-def aggregate_metrics(metrics_list: list):
-    """Считает средние показатели."""
-    if not metrics_list:
-        return {"pass@1": 0, "%passed": 0}
 
-    mean_pass1 = sum(x["pass@1"] for x in metrics_list) / len(metrics_list)
-    mean_pct = sum(x["%passed"] for x in metrics_list) / len(metrics_list)
+class BaseCodeMetric(ABC):
+	def __init__(self, name: str, generation_config: Dict[str, Any]):
+		self.name = name
+		self.gen_config = generation_config
+		self.n_samples = generation_config.get("num_return_sequences", 1)
 
-    return {
-        "mean_pass@1": mean_pass1,
-        "mean_%_passed": mean_pct,
-        "total_samples": len(metrics_list)
-    }
+	@abstractmethod
+	def calculate(self, results: List[List[ExecutionResult]]) -> float:
+		pass
+
+	def get_config(self):
+		return self.gen_config
+
+
+class GreedyPass(BaseCodeMetric):
+	def __init__(self):
+		super().__init__(
+			name="greedy@1",
+			generation_config={
+				"temperature": 0.0,
+				"do_sample": False,
+				"num_return_sequences": 1,
+			}
+		)
+
+	def calculate(self, results: List[List[ExecutionResult]]) -> float:
+		passed_count = sum(1 for task_res in results if task_res[0].is_passed)
+		return passed_count / len(results)
+
+
+class PassAtk(BaseCodeMetric):
+	def __init__(self, k: int, n_samples: int, temperature: float = 0.6):
+		super().__init__(
+			name=f"pass@{k} (n={n_samples})",
+			generation_config={
+				"temperature": temperature,
+				"do_sample": True,
+				"num_return_sequences": n_samples,
+			}
+		)
+		self.k = k
+
+	def calculate(self, results):
+		scores = []
+		for task_result in results:
+			c = sum(1 for res in task_result if res.is_passed)
+			n = len(task_result)
+
+			if c == 0:
+				scores.append(0.0)
+				continue
+
+			score = 1
+			if n - c >= self.k:
+				score -= np.prod(1.0 - self.k / np.arange(n - c + 1, n + 1))
+			scores.append(score)
+
+		return np.mean(scores)
+
+
+class PercentPassed(BaseCodeMetric):
+	def __init__(self, temperature: float = 0.6):
+		super().__init__(
+			name="mean_%passed",
+			generation_config={
+				"temperature": temperature,
+				"do_sample": True,
+				"num_return_sequences": 1,
+			}
+		)
+
+	def calculate(self, results):
+		all_ratios = []
+
+		for task_results in results:
+			for res in task_results:
+				all_ratios.append(res.pass_ratio)
+
+		return np.mean(all_ratios) if all_ratios else 0.0
+
+
+class MeanEntropy(BaseCodeMetric):
+    def __init__(self):
+        # Конфиг такой же, как у pass@10 (обычно считаем энтропию на сэмплировании)
+        # Либо сделать отдельный прогон
+        super().__init__(
+			name="mean_entropy",
+			generation_config={
+				"temperature": 0.6,
+				"do_sample": True,
+				"num_return_sequences": 1
+			}
+		)
+
+    def calculate(self, results):
+        entropies = []
+        for task_res in results:
+            for res in task_res:
+                entropies.append(res.entropy)
+        return np.mean(entropies) if entropies else 0.0

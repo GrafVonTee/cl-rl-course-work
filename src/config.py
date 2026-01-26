@@ -30,12 +30,11 @@ VLLM_PARAMS = {
 }
 
 SAMPLING_SETTINGS = {
-    "n": 1,
-    "temperature": 0.7,
-    "min_p": 0.1,
     "max_tokens": 2048,
     "ignore_eos": False,
     "detokenize": True,
     "logprobs": 1,
     "repetition_penalty": 1,
 }
+
+NUM_PROCESSES = 8

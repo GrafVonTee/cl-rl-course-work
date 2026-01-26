@@ -1,5 +1,6 @@
 from src.config import DATASETS_DIR
 from datasets import load_dataset
+from src.data.types import CodingTask
 
 
 def get_dataset():
@@ -60,3 +61,16 @@ def build_prompt(example: dict, tokenizer, train=False) -> str:
     )
 
     return {"text": text}
+
+
+def mbpp_to_task(row: dict, tokenizer) -> CodingTask:
+    """Преобразует строку MBPP в CodingTask"""
+    prompt_data = build_prompt(row, tokenizer, train=False)
+
+    return CodingTask(
+        task_id=str(row['task_id']),
+        prompt=prompt_data['text'],
+        canonical_solution=row['code'],
+        tests=row['test_list'], # В MBPP это уже список строк
+        stop_tokens=["\nclass", "\ndef", "\nif", "\nprint"]
+    )

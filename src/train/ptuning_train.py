@@ -61,12 +61,18 @@ def train():
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
+    system_msg = (
+        "You are an expert Python coding assistant. "
+        "Given a problem description and function signature, "
+        "implement the function body so that it passes all tests."
+    )
+
     logger.info("Setup P-Tuning...")
     peft_config = PromptTuningConfig(
         task_type=TaskType.CAUSAL_LM,
         num_virtual_tokens=20,
         prompt_tuning_init=PromptTuningInit.TEXT,
-        prompt_tuning_init_text="You are an expert Python assistant.",
+        prompt_tuning_init_text=system_msg,
         tokenizer_name_or_path=config.MODEL_PATH,
     )
 
@@ -103,7 +109,7 @@ def train():
         train_dataset=tokenized_dataset,
         args=TrainingArguments(
             output_dir=config.PTUNING_MODEL_PATH,
-            max_steps=100,
+            max_steps=300,
             learning_rate=1e-2,
             logging_steps=10,
             report_to="none",
