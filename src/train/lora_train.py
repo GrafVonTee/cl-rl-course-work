@@ -23,7 +23,6 @@ def train_model():
         load_in_4bit = True,
     )
 
-    # Навешиваем адаптеры LoRA
     model = FastLanguageModel.get_peft_model(
         model,
         r = 64,
@@ -38,7 +37,6 @@ def train_model():
     logger.info("Подготовка датасета...")
     dataset = mbpp.get_prepared_dataset(tokenizer, split="train")
 
-    # Конфигурация тренера
     trainer = SFTTrainer(
         model = model,
         tokenizer = tokenizer,

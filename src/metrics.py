@@ -10,7 +10,7 @@ class ExecutionResult:
 	passed_tests: int = 0
 	total_tests: int = 0
 	logs: str = ""
-	entropy: float = 0.0  # <--- ДОБАВИТЬ ЭТО ПОЛЕ
+	entropy: float = 0.0
 
 	@property
 	def is_passed(self) -> bool:
@@ -104,13 +104,11 @@ class PercentPassed(BaseCodeMetric):
 
 
 class MeanEntropy(BaseCodeMetric):
-    def __init__(self):
-        # Конфиг такой же, как у pass@10 (обычно считаем энтропию на сэмплировании)
-        # Либо сделать отдельный прогон
+    def __init__(self, temperature: float = 0.6):
         super().__init__(
 			name="mean_entropy",
 			generation_config={
-				"temperature": 0.6,
+				"temperature": temperature,
 				"do_sample": True,
 				"num_return_sequences": 1
 			}
