@@ -40,7 +40,8 @@ def build_prompt(example: dict, tokenizer, train=False) -> str:
         f"{signature_line}:\n\n"
         "Write the full Python function implementation. "
         "Do NOT change the function name or arguments. "
-        "Return only Python code."
+        "You must analyze the problem in a <think> block first, then provide the solution. "
+        "The code must be wrapped in markdown block."
     )
     assistant_msg = (
         f"```python\n{code_solution}\n```"
@@ -68,7 +69,6 @@ def mbpp_to_task(row: dict, tokenizer) -> CodingTask:
     prompt_data = build_prompt(row, tokenizer, train=False)
 
     return CodingTask(
-        task_id=str(row['task_id']),
         prompt=prompt_data['text'],
         canonical_solution=row['code'],
         tests=row['test_list'], # В MBPP это уже список строк

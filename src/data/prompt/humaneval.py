@@ -29,10 +29,12 @@ def build_prompt(example: dict, tokenizer) -> str:
         f"Task ID: {task_id}\n"
         f"Function to implement: {entry_point}\n\n"
         "Complete the following code by writing the function body.\n"
+        "1. First, analyze the problem and plan your solution inside <think>...</think> tags.\n"
+        "2. Then, provide the implementation inside a markdown code block (```python ... ```).\n"
+        "\nConstraints:\n"
         "- Keep all existing imports, the function name, and its arguments unchanged.\n"
         "- Do not modify the docstring.\n"
-        "- You may add local helper functions if needed, but do not change the target signature.\n"
-        "- Return ONLY valid Python code (no explanations, no markdown, no code fences).\n\n"
+        "- You may add local helper functions if needed, but do not change the target signature.\n\n"
         "Code:\n"
         f"{task_text}\n"
     )
@@ -93,7 +95,6 @@ def humaneval_to_task(row: dict, tokenizer) -> CodingTask:
     prepared_tests = [f"candidate = {entry_point}\n{t}" for t in raw_tests]
 
     return CodingTask(
-        task_id=row['task_id'],
         prompt=prompt_str,
         canonical_solution=row['canonical_solution'],
         tests=prepared_tests,
